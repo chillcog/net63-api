@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-const filesDir = "./flies"
+const filesDir = "./files"
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
@@ -41,7 +41,8 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func vpnsHandler(w http.ResponseWriter, r *http.Request) {
-	files, err := getOvpnFiles()
+	country := r.URL.Query().Get("country")
+	files, err := getOvpnFiles(country)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("error reading files"))
@@ -54,7 +55,8 @@ func vpnsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func randomVpnHandler(w http.ResponseWriter, r *http.Request) {
-	files, err := getOvpnFiles()
+	country := r.URL.Query().Get("country")
+	files, err := getOvpnFiles(country)
 	if err != nil || len(files) == 0 {
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte("no files found"))
@@ -80,7 +82,7 @@ func filesHandler(w http.ResponseWriter, r *http.Request) {
 	io.Copy(w, f)
 }
 
-func getOvpnFiles() ([]string, error) {
+func getOvpnFiles(country string) ([]string, error) {
 	dir, err := os.Open(filesDir)
 	if err != nil {
 		return nil, err
@@ -93,7 +95,9 @@ func getOvpnFiles() ([]string, error) {
 	var ovpnFiles []string
 	for _, f := range files {
 		if strings.HasSuffix(f, ".ovpn") {
-			ovpnFiles = append(ovpnFiles, f)
+			if country == "" || strings.HasPrefix(strings.ToLower(f), strings.ToLower(country)) {
+				ovpnFiles = append(ovpnFiles, f)
+			}
 		}
 	}
 	return ovpnFiles, nil
